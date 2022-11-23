@@ -76,8 +76,8 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
   userInfo.log.push({
     description: req.body.description,
     duration: req.body.duration,
-    // does the req.body.date need to be parsed to follow the same format as toDateString() does? 
-    date: req.body.date ? req.body.date : new Date().toDateString(),
+    // should the date be saved as a date object or a string?
+    date: req.body.date ? new Date(req.body.date).toDateString() : new Date().toDateString()
   });
 
   await userInfo.save();
@@ -86,8 +86,20 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
     username: userInfo.username,
     description: userInfo.log[userInfo.count-1].description, // can also use req.body
     duration: userInfo.log[userInfo.count-1].duration, // can also use req.body
-    data: userInfo.log[userInfo.count-1].date, // can also use req.body
+    data: userInfo.log[userInfo.count-1].date, // can also use req.body 
     _id: userInfo._id
+  });
+});
+
+// get exercise log
+app.get('/api/users/:_id/logs', async (req, res) => {
+  console.log(req.params)
+  let userData = await eLog.findById(req.params._id);
+  res.json({
+    username: userData.username,
+    count: userData.count,
+    _id: userData._id,
+    log: userData.log
   });
 });
 
