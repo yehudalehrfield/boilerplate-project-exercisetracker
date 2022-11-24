@@ -71,36 +71,61 @@ app.post("/api/users/:_id/exercises", async (req, res) => {
   console.log(req.body);
   console.log(req.params);
   console.log(userInfo);
-  
+
   userInfo.count += 1;
   userInfo.log.push({
     description: req.body.description,
     duration: req.body.duration,
     // should the date be saved as a date object or a string?
-    date: req.body.date ? new Date(req.body.date).toDateString() : new Date().toDateString()
+    date: req.body.date
+      ? new Date(req.body.date).toDateString()
+      : new Date().toDateString(),
   });
 
   await userInfo.save();
 
   res.json({
     username: userInfo.username,
-    description: userInfo.log[userInfo.count-1].description, // can also use req.body
-    duration: userInfo.log[userInfo.count-1].duration, // can also use req.body
-    data: userInfo.log[userInfo.count-1].date, // can also use req.body 
-    _id: userInfo._id
+    description: userInfo.log[userInfo.count - 1].description, // can also use req.body
+    duration: userInfo.log[userInfo.count - 1].duration, // can also use req.body
+    data: userInfo.log[userInfo.count - 1].date, // can also use req.body
+    _id: userInfo._id,
   });
 });
 
 // get exercise log
-app.get('/api/users/:_id/logs', async (req, res) => {
-  console.log(req.params)
+app.get("/api/users/:_id/logs", async (req, res) => {
+  // get full user data
   let userData = await eLog.findById(req.params._id);
-  res.json({
-    username: userData.username,
-    count: userData.count,
-    _id: userData._id,
-    log: userData.log
-  });
+  
+  // get query parameters
+  fromDate = req.query.from ? req.query.from : new Date(0);
+  toDate = req.query.to ? req.query.to : new Date();
+  limit = req.query.limit ? req.query.limit : userData.count;
+  // how to do this using optional chaining? 
+  // fromDate = req.query?.from | new Date(0).valueOf;
+  // toDate = req.query?.to | new Date().valueOf;
+  // limit = req.query?.limit | userData.count;
+  
+  // filter log using query parameters
+  let filteredLog = userData.log
+    .filter(
+      (d) =>
+        new Date(d.date) >= new Date(fromDate) &&
+        new Date(d.date) <= new Date(toDate)
+    )
+    .sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf())
+    .slice(0, limit);
+  if (!userData) {
+    res.json({ error: "invalid id" });
+  } else {
+    res.json({
+      username: userData.username,
+      count: userData.count,
+      _id: userData._id,
+      log: filteredLog,
+    });
+  }
 });
 
 const listener = app.listen(process.env.PORT || 3000, () => {
